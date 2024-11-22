@@ -60,9 +60,10 @@ type Source struct {
 }
 
 type Registry struct {
-	Type string `yaml:"type"`
-	AWS  AWS    `yaml:"aws"`
-	GCP  GCP    `yaml:"gcp"`
+	Type   string `yaml:"type"`
+	AWS    AWS    `yaml:"aws"`
+	GCP    GCP    `yaml:"gcp"`
+	Harbor Harbor `yaml:"harbor"`
 }
 
 type AWS struct {
@@ -76,6 +77,11 @@ type GCP struct {
 	Location     string `yaml:"location"`
 	ProjectID    string `yaml:"projectId"`
 	RepositoryID string `yaml:"repositoryId"`
+}
+
+type Harbor struct {
+	URL     string `yaml:"location"`
+	Project string `yaml:"project"`
 }
 
 type ECROptions struct {
@@ -109,6 +115,10 @@ func (g *GCP) GarDomain() string {
 	return fmt.Sprintf("%s-docker.pkg.dev/%s/%s", g.Location, g.ProjectID, g.RepositoryID)
 }
 
+func (h *Harbor) HarborDomain() string {
+	return fmt.Sprintf("%s/%s", h.URL, h.Project)
+}
+
 func (r Registry) Domain() string {
 	registry, _ := types.ParseRegistry(r.Type)
 	switch registry {
@@ -116,6 +126,8 @@ func (r Registry) Domain() string {
 		return r.AWS.EcrDomain()
 	case types.RegistryGCP:
 		return r.GCP.GarDomain()
+	case types.RegistryHarbor:
+		return r.Harbor.HarborDomain()
 	default:
 		return ""
 	}
@@ -152,6 +164,13 @@ func CheckRegistryConfiguration(r Registry) error {
 		}
 		if r.GCP.RepositoryID == "" {
 			return errorWithType(`requires a field "repositoryId"`)
+		}
+	case types.RegistryHarbor:
+		if r.Harbor.URL == "" {
+			return errorWithType(`requires a field "url"`)
+		}
+		if r.Harbor.Project == "" {
+			return errorWithType(`requires a field "project"`)
 		}
 	}
 
